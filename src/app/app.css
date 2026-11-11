@@ -2425,7 +2425,7 @@ h1 em {
 
   .main-column {
     margin-left: 0;
-    padding-bottom: 74px;
+    padding-bottom: calc(122px + env(safe-area-inset-bottom));
   }
 
   .topbar {
@@ -2677,12 +2677,12 @@ h1 em {
     position: fixed;
     z-index: 8;
     right: 0;
-    bottom: 0;
+    bottom: calc(48px + env(safe-area-inset-bottom));
     left: 0;
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     min-height: 65px;
-    padding: 7px 5px max(7px, env(safe-area-inset-bottom));
+    padding: 7px 5px;
     border-top: 1px solid var(--line);
     background: rgb(255 255 255 / 96%);
     backdrop-filter: blur(12px);
