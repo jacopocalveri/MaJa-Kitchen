@@ -1,0 +1,1429 @@
+@if (store.error() || auth.error() || store.success()) {
+  <div
+    class="toast-message"
+    [class.toast-error]="store.error() || auth.error()"
+    [class.toast-success]="!store.error() && !auth.error()"
+    role="alert"
+  >
+    <span class="toast-icon" aria-hidden="true">{{
+      store.error() || auth.error() ? '!' : '✓'
+    }}</span>
+    <p>{{ store.error() || auth.error() || store.success()?.message }}</p>
+    <button
+      type="button"
+      class="notice-dismiss"
+      aria-label="Chiudi messaggio"
+      (click)="store.clearError(); auth.clearMessages(); store.clearSuccess()"
+    >
+      ×
+    </button>
+  </div>
+}
+
+@if (showKitchen()) {
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#" (click)="$event.preventDefault(); selectSection('overview')">
+        <span class="brand-mark">M<span>+</span></span>
+        <span class="brand-name">MaJa <strong>Kitchen</strong></span>
+      </a>
+
+      <div class="household-card">
+        <span class="household-avatar">M</span>
+        <span class="household-copy"
+          ><strong>Casa MaJa</strong><small>Spazio condiviso</small></span
+        >
+        <span class="online-dot" aria-label="Locale"></span>
+      </div>
+
+      <span class="nav-caption">IL TUO SPAZIO</span>
+      <nav class="primary-nav" aria-label="Navigazione principale">
+        @for (item of navItems; track item.id) {
+          <button
+            type="button"
+            class="nav-link"
+            [class.active]="activeSection() === item.id"
+            (click)="selectSection(item.id)"
+          >
+            <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
+            <span>{{ item.label }}</span>
+            @if (item.id === 'pantry' && expiringCount() > 0) {
+              <span class="nav-count">{{ expiringCount() }}</span>
+            }
+          </button>
+        }
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="storage-note">
+          <span class="storage-note-icon">✦</span>
+          <p><strong>Un passo alla volta</strong><br />La tua cucina, senza sprechi.</p>
+        </div>
+        <span class="local-mode">
+          <span></span>
+          {{ auth.status() === 'demo' ? 'Demo locale' : 'Spazio condiviso' }}
+          @if (store.syncing()) {
+            <small>· sincronizzazione…</small>
+          }
+        </span>
+      </div>
+    </aside>
+
+    <div class="main-column">
+      <header class="topbar">
+        <div class="breadcrumb">
+          <span>MaJa Kitchen</span><span class="breadcrumb-separator">/</span
+          ><strong>{{ sectionTitle() }}</strong>
+        </div>
+        <div class="topbar-actions">
+          <span class="today-label">{{ dayLabel(localToday) }}</span>
+          @if (auth.status() === 'ready') {
+            <button
+              class="profile-button"
+              type="button"
+              [attr.aria-label]="'Esci da ' + (auth.user()?.email ?? 'account')"
+              (click)="signOut()"
+            >
+              ↪
+            </button>
+          } @else {
+            <button class="profile-button" type="button" aria-label="Profilo demo">J</button>
+          }
+        </div>
+      </header>
+
+      <main class="page-content">
+        @if (store.loading()) {
+          <div class="notice notice-info" role="status">Caricamento dei dati condivisi…</div>
+        }
+        @if (activeSection() === 'overview') {
+          <section class="welcome-row">
+            <div>
+              <span class="eyebrow">{{ todayHeading }}</span>
+              <h1>La cucina è il cuore <em>di casa.</em></h1>
+              <p class="page-intro">Tutto quello che serve per mangiare bene, insieme.</p>
+            </div>
+            <button type="button" class="button button-primary" (click)="selectSection('planner')">
+              <span>✦</span> Organizza i pasti
+            </button>
+          </section>
+
+          <section class="stats-grid" aria-label="Riepilogo cucina">
+            <article class="stat-card stat-card-green">
+              <div class="stat-icon">▤</div>
+              <span class="stat-label">IN DISPENSA</span>
+              <strong class="stat-value">{{ store.pantryItems().length }}</strong>
+              <span class="stat-foot">ingredienti tracciati</span>
+            </article>
+            <article class="stat-card stat-card-peach">
+              <div class="stat-icon">◷</div>
+              <span class="stat-label">DA USARE PRESTO</span>
+              <strong class="stat-value">{{ expiringCount() }}</strong>
+              <span class="stat-foot">ingredienti in scadenza</span>
+            </article>
+            <article class="stat-card stat-card-lavender">
+              <div class="stat-icon">✳</div>
+              <span class="stat-label">RICETTE PRONTE</span>
+              <strong class="stat-value">{{ readyRecipeCount() }}</strong>
+              <span class="stat-foot">con al massimo un ingrediente mancante</span>
+            </article>
+          </section>
+
+          <section class="overview-grid">
+            <article class="panel week-preview">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">PIANO PASTI</span>
+                  <h2>I pasti in programma</h2>
+                </div>
+                <button type="button" class="text-button" (click)="selectSection('planner')">
+                  Apri piano <span>→</span>
+                </button>
+              </div>
+              @if (mealDays().length) {
+                <div class="mini-meal-list">
+                  @for (day of mealDays().slice(0, 3); track day.date) {
+                    @for (meal of day.meals; track meal.slot) {
+                      <div class="mini-meal">
+                        <span class="mini-day">{{ shortDayLabel(day.date) }}</span>
+                        <span class="mini-meal-slot">{{
+                          meal.slot === 'lunch' ? 'Pranzo' : 'Cena'
+                        }}</span>
+                        <strong>
+                          {{ recipeById(meal.recipeId)?.title ?? 'Da definire' }}
+                          @if (meal.sideRecipeId) {
+                            <span class="mini-meal-side"
+                              >· {{ recipeById(meal.sideRecipeId)?.title }}</span
+                            >
+                          }
+                        </strong>
+                        <span class="meal-arrow">↗</span>
+                      </div>
+                    }
+                  }
+                </div>
+              } @else {
+                <div class="empty-inline">
+                  <span class="empty-illustration">🥬</span>
+                  <div>
+                    <strong>Il piano è tutto da scrivere.</strong>
+                    <p>Genera una bozza e rivedila prima di approvarla.</p>
+                  </div>
+                  <button
+                    type="button"
+                    class="button button-soft"
+                    (click)="selectSection('planner')"
+                  >
+                    Crea il piano
+                  </button>
+                </div>
+              }
+            </article>
+
+            <article class="panel expiring-preview">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">ZERO SPRECHI</span>
+                  <h2>Da usare presto</h2>
+                </div>
+                <button
+                  type="button"
+                  class="round-arrow"
+                  aria-label="Apri dispensa"
+                  (click)="selectSection('pantry')"
+                >
+                  →
+                </button>
+              </div>
+              @if (expiringCount() > 0) {
+                <div class="expiry-list">
+                  @for (item of expiringPantryItems(); track item.id) {
+                    <div class="expiry-item">
+                      <span class="ingredient-avatar">{{
+                        ingredientName(item.ingredientId).slice(0, 1)
+                      }}</span>
+                      <span class="expiry-copy"
+                        ><strong>{{ ingredientName(item.ingredientId) }}</strong
+                        ><small
+                          >{{ item.quantity }} {{ item.unit }} ·
+                          {{ locationLabel(item.location) }}</small
+                        ></span
+                      >
+                      <span class="expiry-badge">{{ expiryLabel(item) }}</span>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <div class="empty-compact">
+                  <span>✓</span>
+                  <p>Nessun ingrediente in scadenza a breve.</p>
+                </div>
+              }
+            </article>
+          </section>
+
+          <section class="panel recipe-shortcut">
+            <div class="panel-heading">
+              <div>
+                <span class="eyebrow">ISPIRAZIONE DI CASA</span>
+                <h2>Qualcosa di buono, con quello che c’è</h2>
+              </div>
+              <button type="button" class="text-button" (click)="selectSection('recipes')">
+                Tutte le ricette <span>→</span>
+              </button>
+            </div>
+            <div class="shortcut-recipes">
+              @for (recipe of store.recipes().slice(0, 3); track recipe.id) {
+                <article class="shortcut-card">
+                  <div
+                    class="recipe-art"
+                    [class.art-pasta]="recipe.id === 'pasta-pomodoro'"
+                    [class.art-greens]="recipe.id === 'risotto-spinaci'"
+                    [class.art-skillet]="recipe.id === 'frittata-zucchine'"
+                  >
+                    <span>{{
+                      recipe.id === 'pasta-pomodoro'
+                        ? '🍝'
+                        : recipe.id === 'risotto-spinaci'
+                          ? '🥗'
+                          : '🍳'
+                    }}</span>
+                    @if (recipe.favorite) {
+                      <span class="favorite-badge">♥</span>
+                    }
+                  </div>
+                  <div class="shortcut-info">
+                    <span class="recipe-meta"
+                      >{{ recipe.prepMinutes > 0 ? recipe.prepMinutes + ' min' : 'Tempo n.d.' }} ·
+                      {{ recipeCategoryLabel(recipe.category) }}</span
+                    >
+                    <strong>{{ recipe.title }}</strong>
+                    <span class="ready-label">{{
+                      missingIngredients(recipe) === 0
+                        ? '✓ Tutto in dispensa'
+                        : missingIngredients(recipe) + ' ingredienti mancanti'
+                    }}</span>
+                  </div>
+                </article>
+              }
+            </div>
+          </section>
+        }
+
+        @if (activeSection() === 'pantry') {
+          <section class="page-heading">
+            <div>
+              <span class="eyebrow">QUELLO CHE HAI GIÀ</span>
+              <h1>Dispensa <em>e frigo</em></h1>
+              <p class="page-intro">
+                Tieni d’occhio gli ingredienti e dai una seconda vita a quello che hai.
+              </p>
+            </div>
+            <span class="heading-counter"
+              ><strong>{{ store.pantryItems().length }}</strong> ingredienti</span
+            >
+          </section>
+
+          <div class="pantry-layout">
+            <section class="panel inventory-panel">
+              <div class="toolbar">
+                <label class="search-field"
+                  ><span>⌕</span
+                  ><input
+                    type="search"
+                    name="pantry-search"
+                    placeholder="Cerca un ingrediente..."
+                    [ngModel]="searchText()"
+                    (ngModelChange)="searchText.set($event)"
+                /></label>
+                <select
+                  aria-label="Filtra per luogo"
+                  name="pantry-location-filter"
+                  [ngModel]="locationFilter()"
+                  (ngModelChange)="locationFilter.set($event)"
+                >
+                  <option value="all">Tutti i luoghi</option>
+                  @for (location of locations; track location) {
+                    <option [value]="location">{{ locationLabel(location) }}</option>
+                  }
+                </select>
+                <select
+                  aria-label="Filtra per scadenza"
+                  name="pantry-expiry-filter"
+                  [ngModel]="expiryFilter()"
+                  (ngModelChange)="expiryFilter.set($event)"
+                >
+                  <option value="all">Tutte le scadenze</option>
+                  <option value="expiring">In scadenza</option>
+                </select>
+              </div>
+              <div class="inventory-header">
+                <span>INGREDIENTE</span><span>QUANTITÀ</span><span>UNITÀ</span><span>LUOGO</span
+                ><span>SCADENZA</span><span></span>
+              </div>
+              @for (item of visiblePantry(); track item.id) {
+                <div class="inventory-row" [class.row-expiring]="isExpiringSoon(item)">
+                  <span class="inventory-name"
+                    ><span class="ingredient-avatar">{{
+                      ingredientName(item.ingredientId).slice(0, 1)
+                    }}</span
+                    ><strong>{{ ingredientName(item.ingredientId) }}</strong></span
+                  >
+                  <label class="quantity-editor"
+                    ><input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      [ngModel]="item.quantity"
+                      [name]="'quantity-' + item.id"
+                      (ngModelChange)="updatePantryItem(item, $event)"
+                  /></label>
+                  <select
+                    class="row-select"
+                    [ngModel]="item.unit"
+                    [name]="'unit-' + item.id"
+                    (ngModelChange)="updatePantryUnit(item, $event)"
+                  >
+                    @for (unit of units; track unit) {
+                      <option [value]="unit">{{ unit }}</option>
+                    }
+                  </select>
+                  <select
+                    class="row-select"
+                    [ngModel]="item.location"
+                    [name]="'location-' + item.id"
+                    (ngModelChange)="updatePantryLocation(item, $event)"
+                  >
+                    @for (location of locations; track location) {
+                      <option [value]="location">{{ locationLabel(location) }}</option>
+                    }
+                  </select>
+                  <input
+                    class="expiry-date-input"
+                    type="date"
+                    [ngModel]="item.expiresOn ?? ''"
+                    [name]="'expiry-' + item.id"
+                    (ngModelChange)="updatePantryExpiry(item, $event)"
+                    aria-label="Data di scadenza"
+                  />
+                  <button
+                    type="button"
+                    class="icon-button danger-hover"
+                    [attr.aria-label]="'Rimuovi ' + ingredientName(item.ingredientId)"
+                    (click)="store.removePantryItem(item.id)"
+                  >
+                    ×
+                  </button>
+                </div>
+              } @empty {
+                <div class="empty-state">
+                  <span class="empty-illustration">🫙</span>
+                  <h3>La dispensa è vuota</h3>
+                  <p>Aggiungi un ingrediente per iniziare a organizzare la cucina.</p>
+                </div>
+              }
+            </section>
+
+            <aside class="panel add-panel">
+              <span class="eyebrow">AGGIUNGI ALLA DISPENSA</span>
+              <h2>Hai fatto scorta?</h2>
+              <p class="panel-description">
+                Aggiungi quello che hai acquistato o che trovi in cucina.
+              </p>
+              <form (ngSubmit)="addPantryItem()">
+                <label
+                  >Ingrediente<input
+                    name="new-pantry-ingredient"
+                    [ngModel]="pantryIngredientName"
+                    (ngModelChange)="updatePantryIngredientName($event)"
+                    list="ingredient-catalog"
+                    maxlength="100"
+                    autocomplete="off"
+                    placeholder="Es. Ceci, tahina..."
+                    required
+                /></label>
+                <datalist id="ingredient-catalog">
+                  @for (ingredient of store.ingredients(); track ingredient.id) {
+                    <option [value]="ingredient.name"></option>
+                  }
+                </datalist>
+                @if (isNewIngredient(pantryIngredientName)) {
+                  <label
+                    >Categoria<select
+                      name="new-pantry-ingredient-category"
+                      [ngModel]="pantryIngredientCategory"
+                      (ngModelChange)="updatePantryIngredientCategory($event)"
+                    >
+                      @for (category of ingredientCategories; track category) {
+                        <option [value]="category">{{ categoryLabel(category) }}</option>
+                      }
+                    </select></label
+                  >
+                }
+                @if (pantryIngredientName.trim()) {
+                  <fieldset class="nutrition-group-options">
+                    <legend>Gruppi nutrizionali</legend>
+                    @for (group of nutritionGroupOptions; track group.value) {
+                      <label class="checkbox-label">
+                        <input
+                          type="checkbox"
+                          [name]="'pantry-nutrition-' + group.value"
+                          [checked]="pantryNutritionGroups.includes(group.value)"
+                          (change)="togglePantryNutritionGroup(group.value, $event)"
+                        />
+                        {{ group.label }}
+                      </label>
+                    }
+                  </fieldset>
+                }
+                <div class="form-row">
+                  <label
+                    >Quantità<input
+                      type="number"
+                      name="new-pantry-quantity"
+                      min="0.1"
+                      step="0.1"
+                      [(ngModel)]="pantryQuantity"
+                      required /></label
+                  ><label
+                    >Unità<select name="new-pantry-unit" [(ngModel)]="pantryUnit">
+                      @for (unit of units; track unit) {
+                        <option [value]="unit">{{ unit }}</option>
+                      }
+                    </select></label
+                  >
+                </div>
+                <label
+                  >Luogo<select name="new-pantry-location" [(ngModel)]="pantryLocation">
+                    @for (location of locations; track location) {
+                      <option [value]="location">{{ locationLabel(location) }}</option>
+                    }
+                  </select></label
+                >
+                <label
+                  >Data di scadenza <span class="optional">(facoltativa)</span
+                  ><input type="date" name="new-pantry-expiry" [(ngModel)]="pantryExpiresOn"
+                /></label>
+                <button type="submit" class="button button-primary button-full">
+                  <span>＋</span> Aggiungi ingrediente
+                </button>
+              </form>
+            </aside>
+          </div>
+        }
+
+        @if (activeSection() === 'recipes') {
+          <section class="page-heading">
+            <div>
+              <span class="eyebrow">IL RICETTARIO DI CASA</span>
+              <h1>Le vostre <em>ricette</em></h1>
+              <p class="page-intro">I piatti che amate, pronti per il prossimo momento insieme.</p>
+            </div>
+            <button type="button" class="button button-primary" (click)="openNewRecipe()">
+              <span>＋</span> Nuova ricetta
+            </button>
+          </section>
+
+          <section class="panel recipe-browser">
+            <div class="toolbar recipe-toolbar">
+              <label class="search-field"
+                ><span>⌕</span
+                ><input
+                  type="search"
+                  name="recipe-search"
+                  placeholder="Cerca titolo o tag..."
+                  [ngModel]="searchText()"
+                  (ngModelChange)="searchText.set($event)"
+              /></label>
+              <select
+                aria-label="Filtra per tag"
+                name="recipe-tag-filter"
+                [ngModel]="recipeTagFilter()"
+                (ngModelChange)="recipeTagFilter.set($event)"
+              >
+                <option value="all">Tutti i tag</option>
+                <option value="vegetariano">Vegetariano</option>
+                <option value="veloce">Veloce</option>
+                <option value="senza glutine">Senza glutine</option>
+              </select>
+              <button
+                type="button"
+                class="filter-chip"
+                [class.filter-chip-active]="onlyReadyRecipes()"
+                (click)="onlyReadyRecipes.set(!onlyReadyRecipes())"
+              >
+                ✓ Con quello che hai
+              </button>
+            </div>
+            <div class="recipe-grid">
+              @for (recipe of visibleRecipes(); track recipe.id) {
+                <article class="recipe-card" [class.recipe-excluded]="recipe.excludedFromPlan">
+                  <div
+                    class="recipe-art"
+                    [class.art-pasta]="recipe.category === 'dinner'"
+                    [class.art-greens]="recipe.category === 'lunch'"
+                    [class.art-skillet]="
+                      recipe.category === 'other' || recipe.category === 'breakfast'
+                    "
+                  >
+                    <span>{{
+                      recipe.category === 'dinner'
+                        ? '🍝'
+                        : recipe.category === 'lunch'
+                          ? '🥗'
+                          : '🍳'
+                    }}</span>
+                    <button
+                      type="button"
+                      class="favorite-toggle"
+                      [class.is-favorite]="recipe.favorite"
+                      [attr.aria-label]="
+                        recipe.favorite ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'
+                      "
+                      (click)="store.toggleFavorite(recipe.id)"
+                    >
+                      {{ recipe.favorite ? '♥' : '♡' }}
+                    </button>
+                    @if (recipe.excludedFromPlan) {
+                      <span class="excluded-ribbon">Fuori dal piano</span>
+                    }
+                  </div>
+                  <div class="recipe-card-body">
+                    <div class="recipe-card-meta">
+                      <span>{{ recipeCategoryLabel(recipe.category) }}</span
+                      ><span>·</span
+                      ><span>{{
+                        recipe.prepMinutes > 0 ? recipe.prepMinutes + ' min' : 'Tempo n.d.'
+                      }}</span
+                      ><span>·</span><span>{{ recipe.servings }} porzioni</span>
+                    </div>
+                    <h3>{{ recipe.title }}</h3>
+                    <p>{{ recipe.description || 'Una ricetta di casa da provare.' }}</p>
+                    <p class="recipe-ingredient-summary">
+                      {{ recipeIngredientsLabel(recipe) || 'Ingredienti non indicati' }}
+                    </p>
+                    <div class="tag-row">
+                      @for (tag of recipe.tags; track tag) {
+                        <span class="tag">{{ tag }}</span>
+                      }
+                    </div>
+                    <div class="recipe-card-footer">
+                      <span
+                        class="ready-label"
+                        [class.ready-missing]="missingIngredients(recipe) > 0"
+                        >{{
+                          missingIngredients(recipe) === 0
+                            ? '✓ Tutto in dispensa'
+                            : missingIngredients(recipe) + ' da comprare'
+                        }}</span
+                      >
+                      <button
+                        type="button"
+                        class="cooked-button"
+                        (click)="store.recordCooked(recipe.id)"
+                      >
+                        L’ho cucinata
+                      </button>
+                      <div class="recipe-actions">
+                        <button
+                          type="button"
+                          class="icon-button"
+                          [attr.aria-label]="'Modifica ' + recipe.title"
+                          (click)="editRecipe(recipe)"
+                        >
+                          ✎</button
+                        ><button
+                          type="button"
+                          class="icon-button"
+                          [attr.aria-label]="
+                            recipe.excludedFromPlan ? 'Includi nel piano' : 'Escludi dal piano'
+                          "
+                          (click)="store.toggleRecipeExcluded(recipe.id)"
+                        >
+                          ⊘</button
+                        ><button
+                          type="button"
+                          class="icon-button danger-hover"
+                          [attr.aria-label]="'Elimina ' + recipe.title"
+                          (click)="deleteRecipe(recipe)"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              } @empty {
+                <div class="empty-state">
+                  <span class="empty-illustration">📖</span>
+                  <h3>Nessuna ricetta trovata</h3>
+                  <p>Prova a cambiare ricerca o aggiungi una nuova ricetta.</p>
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        @if (activeSection() === 'planner') {
+          <section class="page-heading">
+            <div>
+              <span class="eyebrow">I TUOI GIORNI, LE TUE IDEE</span>
+              <h1>Il piano <em>dei pasti</em></h1>
+              <p class="page-intro">
+                Scegli le date e i pasti da includere, anche su giorni non consecutivi.
+              </p>
+            </div>
+            @if (store.mealPlan().status === 'approved') {
+              <button
+                type="button"
+                class="button button-primary"
+                (click)="store.editApprovedPlan()"
+              >
+                <span>✎</span> Modifica piano
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="button button-primary"
+                [disabled]="!canGeneratePlan()"
+                (click)="generatePlan()"
+              >
+                <span>✦</span> Genera proposta
+              </button>
+            }
+          </section>
+
+          @if (store.mealPlan().status === 'draft') {
+            <section class="plan-date-selector panel">
+              <div class="plan-date-selector-heading">
+                <div>
+                  <span class="eyebrow">CONFIGURA IL PIANO</span>
+                  <h2>Scegli le date</h2>
+                  <p>Aggiungi una o più date e seleziona pranzo, cena o entrambi.</p>
+                </div>
+                <div class="plan-date-add">
+                  <label for="plan-date-input">Data</label>
+                  <div>
+                    <input
+                      id="plan-date-input"
+                      type="date"
+                      name="plan-date-input"
+                      [(ngModel)]="planDateInput"
+                    />
+                    <button type="button" class="button button-soft" (click)="addPlanDate()">
+                      Aggiungi data
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="plan-date-list">
+                @for (selection of planDateSelections(); track selection.date) {
+                  <div class="plan-date-row">
+                    <strong>{{ dayLabel(selection.date) }}</strong>
+                    <div class="plan-date-slots">
+                      <label>
+                        <input
+                          type="checkbox"
+                          [ngModel]="selection.lunch"
+                          [name]="'plan-lunch-' + selection.date"
+                          (ngModelChange)="setPlanDateSlot(selection.date, 'lunch', $event)"
+                        />
+                        Pranzo
+                      </label>
+                      <label>
+                        <input
+                          type="checkbox"
+                          [ngModel]="selection.dinner"
+                          [name]="'plan-dinner-' + selection.date"
+                          (ngModelChange)="setPlanDateSlot(selection.date, 'dinner', $event)"
+                        />
+                        Cena
+                      </label>
+                    </div>
+                    <button
+                      type="button"
+                      class="text-button plan-date-remove"
+                      [attr.aria-label]="'Rimuovi ' + dayLabel(selection.date)"
+                      (click)="removePlanDate(selection.date)"
+                    >
+                      Rimuovi
+                    </button>
+                  </div>
+                } @empty {
+                  <p class="plan-date-empty">
+                    Non hai ancora aggiunto date. Puoi scegliere anche giorni futuri.
+                  </p>
+                }
+              </div>
+            </section>
+          }
+
+          @if (store.mealPlan().meals.length > 0) {
+            <div class="plan-toolbar panel">
+              <div class="plan-status">
+                <span
+                  class="status-dot"
+                  [class.status-approved]="store.mealPlan().status === 'approved'"
+                ></span
+                ><span
+                  ><strong>{{
+                    store.mealPlan().status === 'approved' ? 'Piano approvato' : 'Bozza da rivedere'
+                  }}</strong
+                  ><small>{{
+                    store.mealPlan().status === 'approved'
+                      ? 'La lista della spesa è pronta per la revisione.'
+                      : 'Puoi cambiare, spostare o bloccare ogni pasto.'
+                  }}</small></span
+                >
+              </div>
+              @if (store.mealPlan().status === 'draft') {
+                <div class="plan-toolbar-actions">
+                  <button type="button" class="button button-quiet" (click)="deleteMealPlan()">
+                    Elimina piano
+                  </button>
+                  <button type="button" class="button button-primary" (click)="store.approvePlan()">
+                    Approva piano <span>→</span>
+                  </button>
+                </div>
+              } @else {
+                <div class="plan-toolbar-actions">
+                  <button type="button" class="button button-quiet" (click)="deleteMealPlan()">
+                    Elimina piano
+                  </button>
+                  <button
+                    type="button"
+                    class="button button-soft"
+                    (click)="selectSection('shopping')"
+                  >
+                    Rivedi la lista della spesa <span>→</span>
+                  </button>
+                </div>
+              }
+            </div>
+
+            <div class="week-grid">
+              @for (day of mealDays(); track day.date) {
+                <section class="day-card">
+                  <div class="day-card-heading">
+                    <span class="day-name">{{ shortDayLabel(day.date) }}</span
+                    ><strong>{{ formatDate(day.date) }}</strong
+                    ><span class="day-status">{{ dateStatus(day.date) }}</span>
+                  </div>
+                  @for (meal of day.meals; track meal.slot) {
+                    <article class="meal-slot-card" [class.meal-locked]="meal.locked">
+                      <div class="meal-slot-heading">
+                        <span>{{ meal.slot === 'lunch' ? 'Pranzo' : 'Cena' }}</span
+                        ><button
+                          type="button"
+                          class="lock-button"
+                          [disabled]="store.mealPlan().status !== 'draft'"
+                          [attr.aria-label]="meal.locked ? 'Sblocca pasto' : 'Blocca pasto'"
+                          (click)="store.toggleMealLock(meal.date, meal.slot)"
+                        >
+                          {{ meal.locked ? '🔒' : '⌑' }}
+                        </button>
+                      </div>
+                      @if (store.mealPlan().status === 'draft') {
+                        <label
+                          class="meal-field-label"
+                          [attr.for]="'meal-' + meal.date + '-' + meal.slot"
+                        >
+                          Piatto principale
+                        </label>
+                        <select
+                          class="meal-recipe-select"
+                          [id]="'meal-' + meal.date + '-' + meal.slot"
+                          [ngModel]="meal.recipeId ?? ''"
+                          [name]="'meal-' + meal.date + '-' + meal.slot"
+                          [disabled]="meal.locked"
+                          (ngModelChange)="store.replaceMeal(meal.date, meal.slot, $event || null)"
+                        >
+                          <option value="">Nessun pasto</option>
+                          @for (recipe of store.recipes().filter(isPlanEligible); track recipe.id) {
+                            <option [value]="recipe.id">{{ recipe.title }}</option>
+                          }
+                        </select>
+                        @if (meal.recipeId && (mealNeedsSideDish(meal) || meal.sideRecipeId)) {
+                          <label
+                            class="meal-field-label"
+                            [attr.for]="'side-meal-' + meal.date + '-' + meal.slot"
+                          >
+                            Contorno
+                          </label>
+                          <select
+                            class="meal-recipe-select"
+                            [id]="'side-meal-' + meal.date + '-' + meal.slot"
+                            [ngModel]="meal.sideRecipeId ?? ''"
+                            [name]="'side-meal-' + meal.date + '-' + meal.slot"
+                            [disabled]="meal.locked"
+                            (ngModelChange)="
+                              store.replaceSideDish(meal.date, meal.slot, $event || null)
+                            "
+                          >
+                            <option value="">Scegli un contorno</option>
+                            @for (recipe of store.recipes(); track recipe.id) {
+                              @if (isSideDishEligibleForMeal(recipe, meal)) {
+                                <option [value]="recipe.id">{{ recipe.title }}</option>
+                              }
+                            }
+                          </select>
+                          @if (meal.sideRecipeId) {
+                            <button
+                              type="button"
+                              class="remove-meal"
+                              [disabled]="meal.locked"
+                              (click)="store.replaceSideDish(meal.date, meal.slot, null)"
+                            >
+                              Rimuovi contorno
+                            </button>
+                          }
+                        }
+                        @if (meal.recipeId && !mealNeedsSideDish(meal) && !meal.sideRecipeId) {
+                          <span class="planned-side">Piatto completo · senza contorno</span>
+                        }
+                      } @else {
+                        @if (meal.recipeId) {
+                          <strong class="planned-recipe">{{
+                            recipeById(meal.recipeId)?.title ?? 'Nessun pasto'
+                          }}</strong>
+                          <span class="planned-side">{{
+                            meal.sideRecipeId
+                              ? 'Contorno: ' + (recipeById(meal.sideRecipeId)?.title ?? '')
+                              : mealNeedsSideDish(meal)
+                                ? 'Contorno da scegliere'
+                                : 'Piatto completo, senza contorno'
+                          }}</span>
+                        } @else {
+                          <strong class="planned-recipe">Nessun pasto</strong>
+                        }
+                      }
+                      @if (meal.recipeId) {
+                        @for (id of meal.additionalRecipeIds; track id) {
+                          <div class="additional-dish-row">
+                            <span>{{ additionalRecipeLabel(id) }}</span>
+                            @if (store.mealPlan().status === 'draft' && !meal.locked) {
+                              <button
+                                type="button"
+                                class="remove-meal"
+                                [attr.aria-label]="'Rimuovi ' + additionalRecipeLabel(id)"
+                                (click)="store.removeAdditionalRecipe(meal.date, meal.slot, id)"
+                              >
+                                ×
+                              </button>
+                            }
+                          </div>
+                        }
+                        @if (store.mealPlan().status === 'draft' && !meal.locked) {
+                          @if (addingMealKey() === mealKey(meal)) {
+                            <div class="additional-recipe-controls">
+                              <select
+                                class="meal-recipe-select"
+                                [(ngModel)]="additionalRecipeId"
+                                [name]="'additional-recipe-' + meal.date + '-' + meal.slot"
+                                [attr.aria-label]="'Scegli un piatto aggiuntivo per ' + meal.slot"
+                              >
+                                <option value="">Scegli un piatto</option>
+                                <optgroup label="Piatti principali">
+                                  @for (recipe of store.recipes(); track recipe.id) {
+                                    @if (
+                                      isPlanEligible(recipe) &&
+                                      isAdditionalRecipeEligible(recipe, meal)
+                                    ) {
+                                      <option [value]="recipe.id">{{ recipe.title }}</option>
+                                    }
+                                  }
+                                </optgroup>
+                                <optgroup label="Contorni">
+                                  @for (recipe of store.recipes(); track recipe.id) {
+                                    @if (
+                                      isSideDishAvailable(recipe) &&
+                                      isAdditionalRecipeEligible(recipe, meal)
+                                    ) {
+                                      <option [value]="recipe.id">{{ recipe.title }}</option>
+                                    }
+                                  }
+                                </optgroup>
+                              </select>
+                              <div class="additional-recipe-actions">
+                                <button
+                                  type="button"
+                                  class="button button-primary"
+                                  [disabled]="!additionalRecipeId"
+                                  (click)="addAdditionalRecipe(meal)"
+                                >
+                                  Aggiungi
+                                </button>
+                                <button
+                                  type="button"
+                                  class="text-button"
+                                  (click)="toggleAdditionalRecipeForm(meal)"
+                                >
+                                  Annulla
+                                </button>
+                              </div>
+                            </div>
+                          } @else {
+                            @if (hasAdditionalRecipeOptions(meal)) {
+                              <button
+                                type="button"
+                                class="add-additional-dish"
+                                (click)="toggleAdditionalRecipeForm(meal)"
+                              >
+                                ＋ Aggiungi un piatto
+                              </button>
+                            } @else {
+                              <small class="no-additional-dish">
+                                Nessun piatto aggiuntivo compatibile con questo pasto.
+                              </small>
+                            }
+                          }
+                        }
+                      }
+                      @if (meal.recipeId) {
+                        <span class="meal-reason">{{ meal.reason }}</span>
+                        @if (store.mealPlan().status === 'draft' && !meal.locked) {
+                          <button
+                            type="button"
+                            class="remove-meal"
+                            (click)="store.replaceMeal(meal.date, meal.slot, null)"
+                          >
+                            Rimuovi pasto
+                          </button>
+                        }
+                      }
+                    </article>
+                  }
+                </section>
+              }
+            </div>
+          } @else {
+            <section class="panel empty-state plan-empty">
+              <span class="empty-illustration">🗓️</span>
+              <h3>Il piano è ancora tutto da immaginare</h3>
+              <p>Seleziona le date qui sopra e genera una bozza da rivedere e modificare.</p>
+              <button
+                type="button"
+                class="button button-primary"
+                [disabled]="!canGeneratePlan()"
+                (click)="generatePlan()"
+              >
+                Crea la mia proposta
+              </button>
+            </section>
+          }
+        }
+
+        @if (activeSection() === 'shopping') {
+          <section class="page-heading">
+            <div>
+              <span class="eyebrow">INGREDIENTI PER IL PIANO</span>
+              <h1>Lista della <em>spesa</em></h1>
+              <p class="page-intro">
+                La lista mostra gli ingredienti delle ricette: scegliete le quantità al momento
+                della spesa.
+              </p>
+            </div>
+            @if (store.shoppingList().status === 'approved' && !store.shoppingList().completedAt) {
+              <button type="button" class="button button-soft" (click)="copyShoppingList()">
+                Copia lista <span>↗</span>
+              </button>
+            }
+          </section>
+
+          @if (store.mealPlan().status !== 'approved') {
+            <div class="notice notice-info">
+              <span
+                >Approva prima un piano pasti: la lista conterrà gli ingredienti delle ricette,
+                senza dosi predefinite.</span
+              ><button type="button" class="text-button" (click)="selectSection('planner')">
+                Vai al piano →
+              </button>
+            </div>
+          } @else {
+            <div class="shopping-layout">
+              <section class="panel shopping-panel">
+                <div class="shopping-heading">
+                  <div>
+                    <span class="eyebrow">LISTA CONDIVISA</span>
+                    <h2>
+                      {{
+                        store.shoppingList().status === 'approved'
+                          ? 'Pronta per la spesa'
+                          : 'Controlla prima di approvare'
+                      }}
+                    </h2>
+                  </div>
+                  <div class="shopping-heading-actions">
+                    @if (
+                      store.shoppingList().status === 'approved' &&
+                      !store.shoppingList().completedAt &&
+                      store.shoppingList().items.length > 0
+                    ) {
+                      <button
+                        type="button"
+                        class="button button-soft"
+                        (click)="store.setAllShoppingItemsChecked(!store.allShoppingItemsChecked())"
+                      >
+                        {{
+                          store.allShoppingItemsChecked() ? 'Deseleziona tutto' : 'Seleziona tutto'
+                        }}
+                      </button>
+                    }
+                    <span
+                      class="status-pill"
+                      [class.pill-approved]="store.shoppingList().status === 'approved'"
+                      >{{
+                        store.shoppingList().status === 'approved'
+                          ? store.shoppingList().completedAt
+                            ? 'Completata'
+                            : 'Approvata'
+                          : 'Bozza'
+                      }}</span
+                    >
+                  </div>
+                </div>
+                @if (store.shoppingList().items.length) {
+                  @for (category of ingredientCategories; track category) {
+                    @if (shoppingItemsByCategory(category).length > 0) {
+                      <div class="shopping-category">
+                        <h3>
+                          {{ categoryLabel(category) }}
+                          <span>{{ shoppingItemsByCategory(category).length }}</span>
+                        </h3>
+                        @for (item of shoppingItemsByCategory(category); track item.id) {
+                          <div class="shopping-row" [class.shopping-checked]="item.checked">
+                            @if (store.shoppingList().status === 'approved') {
+                              <button
+                                type="button"
+                                class="check-box"
+                                [class.checked]="item.checked"
+                                [attr.aria-label]="
+                                  item.checked
+                                    ? 'Segna come non acquistato'
+                                    : 'Segna come acquistato'
+                                "
+                                (click)="store.toggleShoppingItem(item.id)"
+                              >
+                                {{ item.checked ? '✓' : '' }}
+                              </button>
+                            }
+                            <span class="shopping-item-name"
+                              ><strong>{{ item.name }}</strong>
+                              @if (item.manual) {
+                                <small>Aggiunto manualmente</small>
+                              }
+                            </span>
+                            @if (!store.shoppingList().completedAt) {
+                              <input
+                                class="shopping-quantity"
+                                type="number"
+                                min="0.1"
+                                step="0.1"
+                                placeholder="Qtà"
+                                [attr.aria-label]="'Quantità ' + item.name"
+                                [ngModel]="item.quantity ?? ''"
+                                [name]="'shopping-quantity-' + item.id"
+                                (ngModelChange)="updateShoppingQuantity(item, $event)"
+                              /><select
+                                class="shopping-unit"
+                                [attr.aria-label]="'Unità di misura ' + item.name"
+                                [ngModel]="item.unit"
+                                [name]="'shopping-unit-' + item.id"
+                                (ngModelChange)="updateShoppingUnit(item, $event)"
+                              >
+                                @for (unit of shoppingUnits; track unit) {
+                                  <option [value]="unit">{{ unit }}</option>
+                                }
+                              </select>
+                            } @else {
+                              <span class="shopping-quantity-readonly">
+                                {{ item.quantity === null ? '—' : item.quantity + ' ' + item.unit }}
+                              </span>
+                            }
+                            @if (store.shoppingList().status === 'draft') {
+                              <button
+                                type="button"
+                                class="icon-button danger-hover"
+                                [attr.aria-label]="'Rimuovi ' + item.name"
+                                (click)="store.removeShoppingItem(item.id)"
+                              >
+                                ×
+                              </button>
+                            }
+                          </div>
+                        }
+                      </div>
+                    }
+                  }
+                } @else {
+                  <div class="empty-compact">
+                    <span>✓</span>
+                    <p>Nessun ingrediente da aggiungere per i pasti selezionati.</p>
+                  </div>
+                }
+                @if (store.shoppingList().status === 'draft') {
+                  <div class="manual-item-form">
+                    <h3>Aggiungi un articolo</h3>
+                    <div class="manual-item-fields">
+                      <select
+                        aria-label="Ingrediente da aggiungere"
+                        name="shopping-new-ingredient"
+                        [(ngModel)]="shoppingIngredientId"
+                      >
+                        @for (ingredient of store.ingredients(); track ingredient.id) {
+                          <option [value]="ingredient.id">{{ ingredient.name }}</option>
+                        }</select
+                      ><button type="button" class="button button-soft" (click)="addShoppingItem()">
+                        Aggiungi
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    class="button button-primary button-full"
+                    (click)="store.approveShoppingList()"
+                  >
+                    Approva la lista <span>→</span>
+                  </button>
+                } @else if (!store.shoppingList().completedAt) {
+                  <div class="shopping-complete">
+                    <span
+                      >Spesa conclusa? Gli articoli spuntati verranno aggiunti alla dispensa.</span
+                    ><button
+                      type="button"
+                      class="button button-primary"
+                      (click)="store.completeShopping()"
+                    >
+                      Spesa completata
+                    </button>
+                  </div>
+                } @else {
+                  <div class="completion-banner">
+                    <span>✓</span>
+                    <div>
+                      <strong>Spesa completata</strong>
+                      <p>Gli articoli spuntati sono stati aggiunti alla dispensa.</p>
+                    </div>
+                  </div>
+                }
+              </section>
+
+              <aside class="panel shopping-side-note">
+                <span class="note-illustration">🧺</span
+                ><span class="eyebrow">PICCOLO PROMEMORIA</span>
+                <h2>La lista non fa la spesa da sola.</h2>
+                <p>
+                  Rimuovi gli ingredienti che hai già e indica quantità e unità quando li acquisti.
+                  Solo gli articoli spuntati entrano in dispensa.
+                </p>
+                <div class="list-summary">
+                  <span>Articoli in lista</span
+                  ><strong>{{ store.shoppingList().items.length }}</strong>
+                </div>
+              </aside>
+            </div>
+          }
+        }
+      </main>
+    </div>
+
+    <nav class="mobile-nav" aria-label="Navigazione mobile">
+      @for (item of navItems; track item.id) {
+        <button
+          type="button"
+          [class.active]="activeSection() === item.id"
+          (click)="selectSection(item.id)"
+        >
+          <span>{{ item.icon }}</span
+          ><small>{{ item.label }}</small>
+        </button>
+      }
+    </nav>
+  </div>
+
+  @if (showRecipeForm()) {
+    <div class="modal-backdrop" (click)="closeRecipeForm()">
+      <section
+        class="recipe-modal panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="recipe-form-title"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="modal-heading">
+          <div>
+            <span class="eyebrow">IL RICETTARIO DI CASA</span>
+            <h2 id="recipe-form-title">
+              {{ editingRecipeId ? 'Modifica ricetta' : 'Una nuova ricetta' }}
+            </h2>
+          </div>
+          <button type="button" class="icon-button" aria-label="Chiudi" (click)="closeRecipeForm()">
+            ×
+          </button>
+        </div>
+        <form class="recipe-form" (ngSubmit)="saveRecipe()">
+          <label
+            >Titolo<input
+              name="recipe-title"
+              [(ngModel)]="recipeTitle"
+              required
+              placeholder="Es. Pasta della domenica"
+          /></label>
+          <label
+            >Descrizione<textarea
+              name="recipe-description"
+              [(ngModel)]="recipeDescription"
+              rows="2"
+              placeholder="Un ricordo, un ingrediente speciale..."
+            ></textarea>
+          </label>
+          <div class="form-row">
+            <label
+              >Categoria<select name="recipe-category" [(ngModel)]="recipeCategory">
+                @for (category of recipeCategories; track category) {
+                  <option [value]="category">{{ recipeCategoryLabel(category) }}</option>
+                }
+              </select></label
+            ><label
+              >Porzioni<input
+                type="number"
+                min="1"
+                name="recipe-servings"
+                [(ngModel)]="recipeServings" /></label
+            ><label
+              >Minuti<input
+                type="number"
+                min="0"
+                name="recipe-time"
+                [(ngModel)]="recipePrepMinutes"
+            /></label>
+          </div>
+          <div class="form-label-row">
+            <span>Ingredienti</span
+            ><button type="button" class="text-button" (click)="addRecipeIngredient()">
+              ＋ Aggiungi
+            </button>
+          </div>
+          @for (item of recipeIngredientsDraft; track $index; let index = $index) {
+            <div class="recipe-ingredient-row">
+              <div class="recipe-ingredient-name">
+                <input
+                  [name]="'recipe-ingredient-' + index"
+                  [ngModel]="item.ingredientName"
+                  (ngModelChange)="updateRecipeIngredientName(index, $event)"
+                  list="recipe-ingredient-catalog"
+                  maxlength="100"
+                  autocomplete="off"
+                  placeholder="Es. Ceci, tahina..."
+                  required
+                />
+                @if (isNewIngredient(item.ingredientName)) {
+                  <select
+                    [name]="'recipe-ingredient-category-' + index"
+                    [ngModel]="item.category"
+                    (ngModelChange)="updateRecipeIngredientCategory(index, $event)"
+                    [attr.aria-label]="'Categoria ingrediente ' + (index + 1)"
+                  >
+                    @for (category of ingredientCategories; track category) {
+                      <option [value]="category">{{ categoryLabel(category) }}</option>
+                    }
+                  </select>
+                }
+                <fieldset class="nutrition-group-options">
+                  <legend>Gruppi nutrizionali</legend>
+                  @for (group of nutritionGroupOptions; track group.value) {
+                    <label class="checkbox-label">
+                      <input
+                        type="checkbox"
+                        [name]="'recipe-nutrition-' + index + '-' + group.value"
+                        [checked]="item.nutritionGroups.includes(group.value)"
+                        (change)="toggleRecipeIngredientGroup(index, group.value, $event)"
+                      />
+                      {{ group.label }}
+                    </label>
+                  }
+                </fieldset>
+              </div>
+              <button
+                type="button"
+                class="icon-button"
+                [disabled]="recipeIngredientsDraft.length < 2"
+                [attr.aria-label]="'Rimuovi ingrediente ' + (index + 1)"
+                (click)="removeRecipeIngredient(index)"
+              >
+                ×
+              </button>
+            </div>
+          }
+          <datalist id="recipe-ingredient-catalog">
+            @for (ingredient of store.ingredients(); track ingredient.id) {
+              <option [value]="ingredient.name"></option>
+            }
+          </datalist>
+          <label
+            >Procedimento <span class="optional">(uno step per riga)</span
+            ><textarea
+              name="recipe-instructions"
+              [(ngModel)]="recipeInstructions"
+              rows="3"
+              placeholder="Prepara gli ingredienti&#10;Cuoci e servi"
+            ></textarea>
+          </label>
+          <label
+            >Tag <span class="optional">(separati da virgola)</span
+            ><input name="recipe-tags" [(ngModel)]="recipeTags" placeholder="veloce, vegetariano"
+          /></label>
+          <label class="checkbox-label"
+            ><input type="checkbox" name="recipe-repeatable" [(ngModel)]="recipeRepeatable" /> Si
+            può ripetere nel piano se il catalogo è piccolo</label
+          >
+          <div class="modal-actions">
+            <button type="button" class="button button-quiet" (click)="closeRecipeForm()">
+              Annulla</button
+            ><button type="submit" class="button button-primary">
+              {{ editingRecipeId ? 'Salva modifiche' : 'Salva ricetta' }}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  }
+} @else {
+  <main class="auth-page">
+    <section class="auth-card panel">
+      <a class="brand auth-brand" href="#" (click)="$event.preventDefault()">
+        <span class="brand-mark">M<span>+</span></span>
+        <span class="brand-name">MaJa <strong>Kitchen</strong></span>
+      </a>
+
+      @if (auth.status() === 'loading') {
+        <div class="auth-message" role="status">Connessione a Supabase…</div>
+      } @else if (auth.status() === 'needs-household') {
+        <span class="eyebrow">ULTIMO PASSO</span>
+        <h1>Crea la vostra casa</h1>
+        <p class="page-intro">La dispensa e i piani saranno condivisi con il tuo account.</p>
+        <form class="auth-form" (ngSubmit)="createHousehold()">
+          <label
+            >Nome della casa<input
+              name="household-name"
+              [(ngModel)]="householdName"
+              maxlength="80"
+              required
+          /></label>
+          <button class="button button-primary button-full" type="submit">
+            Crea casa e carica i dati iniziali
+          </button>
+        </form>
+      } @else if (auth.status() === 'error') {
+        <span class="eyebrow">CONNESSIONE NON RIUSCITA</span>
+        <h1>MaJa Kitchen</h1>
+        <p class="auth-message" role="alert">{{ auth.error() }}</p>
+        <button class="button button-soft" type="button" (click)="auth.initialize()">
+          Riprova
+        </button>
+      } @else {
+        <span class="eyebrow">LA CUCINA, INSIEME</span>
+        <h1>{{ authMode() === 'login' ? 'Bentornato a casa.' : 'Crea il tuo account.' }}</h1>
+        <p class="page-intro">
+          {{ authMode() === 'login' ? 'Accedi per continuare.' : 'Registrati per iniziare.' }}
+        </p>
+        <form class="auth-form" (ngSubmit)="submitAuth()">
+          <label
+            >Email<input
+              type="email"
+              name="auth-email"
+              [(ngModel)]="authEmail"
+              autocomplete="email"
+              required
+          /></label>
+          <label
+            >Password<input
+              type="password"
+              name="auth-password"
+              [(ngModel)]="authPassword"
+              [attr.autocomplete]="authMode() === 'login' ? 'current-password' : 'new-password'"
+              minlength="8"
+              required
+          /></label>
+          @if (auth.message()) {
+            <p class="auth-message" role="status">{{ auth.message() }}</p>
+          }
+          <button class="button button-primary button-full" type="submit">
+            {{ authMode() === 'login' ? 'Accedi' : 'Crea account' }}
+          </button>
+        </form>
+        <button
+          class="text-button auth-switch"
+          type="button"
+          (click)="authMode.set(authMode() === 'login' ? 'signup' : 'login'); auth.clearMessages()"
+        >
+          {{
+            authMode() === 'login'
+              ? 'Nuovo su MaJa Kitchen? Crea un account'
+              : 'Hai già un account? Accedi'
+          }}
+        </button>
+      }
+    </section>
+  </main>
+}

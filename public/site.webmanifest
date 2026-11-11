@@ -1,0 +1,17 @@
+{
+  "name": "MaJa Kitchen",
+  "short_name": "MaJa Kitchen",
+  "description": "Dispensa, ricette, piano pasti e lista della spesa condivisa.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbfcf9",
+  "theme_color": "#2f654e",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
