@@ -66,6 +66,8 @@ export class App {
   readonly store = inject(KitchenStore);
   readonly auth = inject(AuthService);
   readonly authMode = signal<'login' | 'signup'>('login');
+  readonly householdSetupMode = signal<'join' | 'create'>('join');
+  readonly showHouseholdInvite = signal(false);
   readonly showKitchen = computed(
     () => this.auth.status() === 'demo' || this.auth.status() === 'ready',
   );
@@ -162,6 +164,7 @@ export class App {
   authEmail = '';
   authPassword = '';
   householdName = 'Casa MaJa';
+  householdInviteCodeInput = '';
 
   pantryIngredientName = '';
   pantryIngredientCategory: IngredientCategory = 'other';
@@ -542,6 +545,28 @@ export class App {
 
   createHousehold(): void {
     void this.auth.createHousehold(this.householdName);
+  }
+
+  joinHousehold(): void {
+    void this.auth.joinHousehold(this.householdInviteCodeInput);
+  }
+
+  async copyHouseholdInviteCode(): Promise<void> {
+    const inviteCode = this.auth.householdInviteCode();
+    if (!inviteCode) {
+      this.auth.error.set('Genera prima un codice invito.');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(inviteCode);
+      this.auth.message.set('Codice copiato. Invialo alla persona che vuoi invitare.');
+    } catch (error) {
+      this.auth.error.set(
+        error instanceof Error
+          ? `Impossibile copiare il codice: ${error.message}`
+          : 'Impossibile copiare il codice invito.',
+      );
+    }
   }
 
   signOut(): void {

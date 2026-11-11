@@ -28,6 +28,17 @@ export type HouseholdMemberRow = {
   joined_at: string;
 };
 
+export type HouseholdInvitationRow = {
+  id: string;
+  household_id: string;
+  invite_code: string;
+  created_by: string;
+  created_at: string;
+  expires_at: string;
+  redeemed_at: string | null;
+  redeemed_by: string | null;
+};
+
 export type IngredientRow = {
   id: string;
   household_id: string;
@@ -154,6 +165,11 @@ export type Database = {
         Pick<HouseholdMemberRow, 'household_id' | 'user_id'> &
           Partial<Pick<HouseholdMemberRow, 'role'>>
       >;
+      household_invitations: Table<
+        HouseholdInvitationRow,
+        Pick<HouseholdInvitationRow, 'household_id' | 'invite_code' | 'created_by' | 'expires_at'> &
+          Partial<Pick<HouseholdInvitationRow, 'id' | 'created_at' | 'redeemed_at' | 'redeemed_by'>>
+      >;
       ingredients: Table<
         IngredientRow,
         Pick<IngredientRow, 'household_id' | 'canonical_name' | 'name' | 'category'> &
@@ -235,6 +251,14 @@ export type Database = {
     Functions: {
       create_household_with_seed: {
         Args: { p_name?: string };
+        Returns: string;
+      };
+      create_household_invitation: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
+      };
+      join_household_with_invite: {
+        Args: { p_invite_code: string };
         Returns: string;
       };
       is_household_member: {

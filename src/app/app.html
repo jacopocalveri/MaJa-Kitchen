@@ -103,10 +103,75 @@
               <h1>La cucina è il cuore <em>di casa.</em></h1>
               <p class="page-intro">Tutto quello che serve per mangiare bene, insieme.</p>
             </div>
-            <button type="button" class="button button-primary" (click)="selectSection('planner')">
-              <span>✦</span> Organizza i pasti
-            </button>
+            <div class="welcome-actions">
+              @if (auth.status() === 'ready') {
+                <button
+                  type="button"
+                  class="button button-quiet"
+                  (click)="showHouseholdInvite.set(!showHouseholdInvite())"
+                >
+                  Invita in casa
+                </button>
+              }
+              <button
+                type="button"
+                class="button button-primary"
+                (click)="selectSection('planner')"
+              >
+                <span>✦</span> Organizza i pasti
+              </button>
+            </div>
           </section>
+
+          @if (showHouseholdInvite()) {
+            <section class="panel household-invite-panel">
+              <div class="household-invite-heading">
+                <div>
+                  <span class="eyebrow">CASA CONDIVISA</span>
+                  <h2>Invita una persona</h2>
+                  <p>Genera un codice da condividere. È valido per 7 giorni e si usa una volta.</p>
+                </div>
+                <button
+                  type="button"
+                  class="icon-button"
+                  aria-label="Chiudi invito"
+                  (click)="showHouseholdInvite.set(false)"
+                >
+                  ×
+                </button>
+              </div>
+              @if (auth.householdInviteCode()) {
+                <div class="household-invite-code">
+                  <code>{{ auth.householdInviteCode() }}</code>
+                  <button
+                    type="button"
+                    class="button button-soft"
+                    (click)="copyHouseholdInviteCode()"
+                  >
+                    Copia codice
+                  </button>
+                </div>
+                @if (auth.message()) {
+                  <p class="household-invite-message" role="status">{{ auth.message() }}</p>
+                }
+                <button
+                  type="button"
+                  class="text-button"
+                  (click)="auth.createHouseholdInvitation()"
+                >
+                  Genera un nuovo codice
+                </button>
+              } @else {
+                <button
+                  type="button"
+                  class="button button-soft"
+                  (click)="auth.createHouseholdInvitation()"
+                >
+                  Genera codice invito
+                </button>
+              }
+            </section>
+          }
 
           <section class="stats-grid" aria-label="Riepilogo cucina">
             <article class="stat-card stat-card-green">
@@ -1390,20 +1455,60 @@
         <div class="auth-message" role="status">Connessione a Supabase…</div>
       } @else if (auth.status() === 'needs-household') {
         <span class="eyebrow">ULTIMO PASSO</span>
-        <h1>Crea la vostra casa</h1>
-        <p class="page-intro">La dispensa e i piani saranno condivisi con il tuo account.</p>
-        <form class="auth-form" (ngSubmit)="createHousehold()">
-          <label
-            >Nome della casa<input
-              name="household-name"
-              [(ngModel)]="householdName"
-              maxlength="80"
-              required
-          /></label>
-          <button class="button button-primary button-full" type="submit">
-            Crea casa e carica i dati iniziali
+        <h1>Scegli la vostra casa</h1>
+        <p class="page-intro">
+          Unisciti a una casa esistente con un codice oppure creane una nuova.
+        </p>
+        <div class="household-setup-options" role="group" aria-label="Scegli come iniziare">
+          <button
+            type="button"
+            class="household-setup-option"
+            [class.selected]="householdSetupMode() === 'join'"
+            (click)="householdSetupMode.set('join'); auth.clearMessages()"
+          >
+            <strong>Unisciti a una casa</strong>
+            <small>Ho ricevuto un codice invito</small>
           </button>
-        </form>
+          <button
+            type="button"
+            class="household-setup-option"
+            [class.selected]="householdSetupMode() === 'create'"
+            (click)="householdSetupMode.set('create'); auth.clearMessages()"
+          >
+            <strong>Crea una casa</strong>
+            <small>Voglio iniziare da zero</small>
+          </button>
+        </div>
+        @if (householdSetupMode() === 'join') {
+          <form class="auth-form" (ngSubmit)="joinHousehold()">
+            <label
+              >Codice invito<input
+                name="household-invite-code"
+                [(ngModel)]="householdInviteCodeInput"
+                autocomplete="off"
+                autocapitalize="none"
+                spellcheck="false"
+                required
+            /></label>
+            <button class="button button-primary button-full" type="submit">
+              Entra nella casa condivisa
+            </button>
+            <p class="auth-help">Chiedi a un membro della casa di generare un codice invito.</p>
+          </form>
+        } @else {
+          <form class="auth-form" (ngSubmit)="createHousehold()">
+            <label
+              >Nome della casa<input
+                name="household-name"
+                [(ngModel)]="householdName"
+                maxlength="80"
+                required
+            /></label>
+            <button class="button button-primary button-full" type="submit">
+              Crea casa e carica i dati iniziali
+            </button>
+          </form>
+        }
       } @else if (auth.status() === 'error') {
         <span class="eyebrow">CONNESSIONE NON RIUSCITA</span>
         <h1>MaJa Kitchen</h1>

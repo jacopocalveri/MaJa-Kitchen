@@ -11,6 +11,7 @@ export class AuthService {
   readonly status = signal<AuthStatus>('loading');
   readonly user = signal<User | null>(null);
   readonly householdId = signal<string | null>(null);
+  readonly householdInviteCode = signal<string | null>(null);
   readonly error = signal<string | null>(null);
   readonly message = signal<string | null>(null);
 
@@ -79,6 +80,7 @@ export class AuthService {
       }
       this.user.set(null);
       this.householdId.set(null);
+      this.householdInviteCode.set(null);
       this.status.set('unauthenticated');
     } catch (error) {
       this.error.set(errorMessage(error, 'Impossibile uscire dall’account.'));
@@ -105,10 +107,62 @@ export class AuthService {
         this.error.set('Supabase non ha restituito l’ID della casa creata.');
         return;
       }
+      this.householdInviteCode.set(null);
       this.householdId.set(data);
       this.status.set('ready');
     } catch (error) {
       this.error.set(errorMessage(error, 'Impossibile creare la casa.'));
+    }
+  }
+
+  async createHouseholdInvitation(): Promise<void> {
+    this.clearMessages();
+    if (!this.householdId()) {
+      this.error.set('Crea o seleziona una casa prima di invitare qualcuno.');
+      return;
+    }
+    try {
+      const client = await this.getClient();
+      const { data, error } = await client.rpc('create_household_invitation');
+      if (error) {
+        this.error.set(error.message);
+        return;
+      }
+      if (!data) {
+        this.error.set('Supabase non ha restituito il codice invito.');
+        return;
+      }
+      this.householdInviteCode.set(data);
+      this.message.set('Codice valido per 7 giorni. Condividilo solo con la persona invitata.');
+    } catch (error) {
+      this.error.set(errorMessage(error, 'Impossibile creare il codice invito.'));
+    }
+  }
+
+  async joinHousehold(inviteCode: string): Promise<void> {
+    this.clearMessages();
+    if (!inviteCode.trim()) {
+      this.error.set('Inserisci il codice invito ricevuto.');
+      return;
+    }
+    try {
+      const client = await this.getClient();
+      const { data, error } = await client.rpc('join_household_with_invite', {
+        p_invite_code: inviteCode.trim(),
+      });
+      if (error) {
+        this.error.set(error.message);
+        return;
+      }
+      if (!data) {
+        this.error.set('Supabase non ha restituito la casa a cui unirsi.');
+        return;
+      }
+      this.householdInviteCode.set(null);
+      this.householdId.set(data);
+      this.status.set('ready');
+    } catch (error) {
+      this.error.set(errorMessage(error, 'Impossibile unirsi alla casa.'));
     }
   }
 

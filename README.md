@@ -36,7 +36,7 @@ Per importare il ricettario, esegui `supabase/import_ricettario.sql` dopo `setup
 
 Il piano genera un piatto principale e un contorno separato per ogni pranzo e cena. Dopo la migrazione aggiornata, riesegui `setup.sql` e poi `import_ricettario.sql`: le 16 ricette di contorno vengono incluse nel piano e gli ingredienti di entrambi i piatti entrano nella lista della spesa. I piani già salvati senza contorno vanno rigenerati o completati prima dell’approvazione.
 
-L’app gestisce registrazione/accesso, creazione iniziale della casa e dati remoti condivisi con RLS. L’invito del secondo account non è ancora incluso.
+L'app gestisce registrazione/accesso, creazione della casa e dati remoti condivisi con RLS. Per collegare un secondo account, un membro genera un codice invito dalla panoramica; il codice è monouso e scade dopo 7 giorni. Un account senza casa può unirsi con il codice oppure crearne una nuova.
 
 ## Comandi
 

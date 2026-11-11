@@ -17,6 +17,17 @@ create table if not exists public.household_members (
   primary key (household_id, user_id)
 );
 
+create table if not exists public.household_invitations (
+  id uuid primary key default gen_random_uuid(),
+  household_id uuid not null references public.households(id) on delete cascade,
+  invite_code text not null unique,
+  created_by uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null,
+  redeemed_at timestamptz,
+  redeemed_by uuid references auth.users(id) on delete set null
+);
+
 create table if not exists public.ingredients (
   id uuid primary key default gen_random_uuid(),
   household_id uuid not null references public.households(id) on delete cascade,
@@ -509,6 +520,132 @@ begin
 end;
 $$;
 
+create or replace function public.create_household_invitation()
+returns text
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  current_user_id uuid := auth.uid();
+  target_household_id uuid;
+  member_count integer;
+  new_invite_code text := lower(replace(gen_random_uuid()::text, '-', ''));
+begin
+  if current_user_id is null then
+    raise exception 'Authentication is required.';
+  end if;
+
+  select household_id into target_household_id
+  from public.household_members
+  where user_id = current_user_id;
+
+  if target_household_id is null then
+    raise exception 'Join or create a household before inviting someone.';
+  end if;
+
+  select count(*) into member_count
+  from public.household_members
+  where household_id = target_household_id;
+
+  if member_count >= 2 then
+    raise exception 'This household already has two members.';
+  end if;
+
+  update public.household_invitations
+  set expires_at = now()
+  where household_id = target_household_id
+    and redeemed_at is null
+    and expires_at > now();
+
+  select count(*) into member_count
+  from public.household_members
+  where household_id = target_household_id;
+
+  if member_count >= 2 then
+    raise exception 'This household already has two members.';
+  end if;
+
+  insert into public.household_invitations (
+    household_id,
+    invite_code,
+    created_by,
+    expires_at
+  )
+  values (
+    target_household_id,
+    new_invite_code,
+    current_user_id,
+    now() + interval '7 days'
+  );
+
+  return new_invite_code;
+end;
+$$;
+
+create or replace function public.join_household_with_invite(p_invite_code text)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  current_user_id uuid := auth.uid();
+  target_invitation public.household_invitations%rowtype;
+  member_count integer;
+begin
+  if current_user_id is null then
+    raise exception 'Authentication is required.';
+  end if;
+
+  if exists (
+    select 1 from public.household_members where user_id = current_user_id
+  ) then
+    raise exception 'This user already belongs to a household.';
+  end if;
+
+  select * into target_invitation
+  from public.household_invitations
+  where invite_code = lower(trim(coalesce(p_invite_code, '')))
+    and redeemed_at is null
+    and expires_at > now()
+  for update;
+
+  if not found then
+    raise exception 'The invitation code is invalid or expired.';
+  end if;
+
+  perform 1
+  from public.households
+  where id = target_invitation.household_id
+  for update;
+
+  if exists (
+    select 1 from public.household_members where user_id = current_user_id
+  ) then
+    raise exception 'This user already belongs to a household.';
+  end if;
+
+  select count(*) into member_count
+  from public.household_members
+  where household_id = target_invitation.household_id;
+
+  if member_count >= 2 then
+    raise exception 'This household already has two members.';
+  end if;
+
+  insert into public.household_members (household_id, user_id, role)
+  values (target_invitation.household_id, current_user_id, 'member');
+
+  update public.household_invitations
+  set redeemed_at = now(),
+      redeemed_by = current_user_id
+  where id = target_invitation.id;
+
+  return target_invitation.household_id;
+end;
+$$;
+
 create or replace function public.approve_meal_plan(p_meal_plan_id uuid)
 returns void
 language plpgsql
@@ -599,6 +736,7 @@ $$;
 
 alter table public.households enable row level security;
 alter table public.household_members enable row level security;
+alter table public.household_invitations enable row level security;
 alter table public.ingredients enable row level security;
 alter table public.pantry_items enable row level security;
 alter table public.recipes enable row level security;
@@ -700,6 +838,8 @@ revoke all on
   public.cooking_history
 from anon;
 
+revoke all on public.household_invitations from public, anon, authenticated;
+
 grant select, insert, update, delete on
   public.households,
   public.household_members,
@@ -724,6 +864,10 @@ revoke all on function public.set_updated_at() from public, anon, authenticated;
 grant execute on function public.set_updated_at() to authenticated;
 revoke all on function public.create_household_with_seed(text) from public, anon;
 grant execute on function public.create_household_with_seed(text) to authenticated;
+revoke all on function public.create_household_invitation() from public, anon;
+grant execute on function public.create_household_invitation() to authenticated;
+revoke all on function public.join_household_with_invite(text) from public, anon;
+grant execute on function public.join_household_with_invite(text) to authenticated;
 revoke all on function public.approve_meal_plan(uuid) from public, anon;
 grant execute on function public.approve_meal_plan(uuid) to authenticated;
 revoke all on function public.complete_shopping_list(uuid) from public, anon;
