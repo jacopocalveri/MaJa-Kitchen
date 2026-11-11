@@ -377,6 +377,60 @@ app-root {
   font-size: 12px;
 }
 
+.profile-menu-container {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.profile-button:focus-visible,
+.profile-logout:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
+}
+
+.profile-dropdown {
+  position: absolute;
+  z-index: 8;
+  top: calc(100% + 9px);
+  right: 0;
+  display: grid;
+  width: min(270px, calc(100vw - 32px));
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgb(34 50 39 / 14%);
+}
+
+.profile-dropdown-email {
+  padding: 3px 4px 11px;
+  border-bottom: 1px solid var(--line);
+  color: #748176;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.profile-logout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 5px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  text-align: left;
+}
+
+.profile-logout:hover {
+  background: #f5f7f2;
+  color: var(--green-dark);
+}
+
 .page-content {
   width: min(100%, 1500px);
   margin: 0 auto;

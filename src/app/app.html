@@ -78,14 +78,25 @@
         <div class="topbar-actions">
           <span class="today-label">{{ dayLabel(localToday) }}</span>
           @if (auth.status() === 'ready') {
-            <button
-              class="profile-button"
-              type="button"
-              [attr.aria-label]="'Esci da ' + (auth.user()?.email ?? 'account')"
-              (click)="signOut()"
-            >
-              ↪
-            </button>
+            <div class="profile-menu-container">
+              <button
+                class="profile-button"
+                type="button"
+                [attr.aria-expanded]="showUserMenu()"
+                [attr.aria-label]="showUserMenu() ? 'Chiudi menu utente' : 'Apri menu utente'"
+                (click)="showUserMenu.set(!showUserMenu())"
+              >
+                {{ userInitials() }}
+              </button>
+              @if (showUserMenu()) {
+                <div class="profile-dropdown">
+                  <span class="profile-dropdown-email">{{ auth.user()?.email }}</span>
+                  <button type="button" class="profile-logout" (click)="signOut()">
+                    Esci <span aria-hidden="true">↪</span>
+                  </button>
+                </div>
+              }
+            </div>
           } @else {
             <button class="profile-button" type="button" aria-label="Profilo demo">J</button>
           }

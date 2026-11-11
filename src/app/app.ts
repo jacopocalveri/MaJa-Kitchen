@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, HostListener, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   IngredientCategory,
@@ -68,6 +68,7 @@ export class App {
   readonly authMode = signal<'login' | 'signup'>('login');
   readonly householdSetupMode = signal<'join' | 'create'>('join');
   readonly showHouseholdInvite = signal(false);
+  readonly showUserMenu = signal(false);
   readonly showKitchen = computed(
     () => this.auth.status() === 'demo' || this.auth.status() === 'ready',
   );
@@ -570,7 +571,29 @@ export class App {
   }
 
   signOut(): void {
+    this.showUserMenu.set(false);
     void this.auth.signOut();
+  }
+
+  userInitials(): string {
+    const email = this.auth.user()?.email?.trim();
+    if (!email) {
+      return 'J';
+    }
+    const localPart = email.split('@')[0] ?? email;
+    const parts = localPart.split(/[._-]+/).filter(Boolean);
+    if (parts.length > 1) {
+      return `${parts[0][0]}${parts[1][0]}`.toLocaleUpperCase('it-IT');
+    }
+    return localPart.slice(0, 2).toLocaleUpperCase('it-IT');
+  }
+
+  @HostListener('document:click', ['$event'])
+  closeUserMenuOutside(event: MouseEvent): void {
+    const target = event.target;
+    if (!(target instanceof Element) || !target.closest('.profile-menu-container')) {
+      this.showUserMenu.set(false);
+    }
   }
 
   deleteMealPlan(): void {
