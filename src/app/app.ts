@@ -28,7 +28,7 @@ import {
 import { inferNutritionGroups, normalizeNutritionGroups } from './domain/nutrition-groups';
 import { AuthService } from './services/auth.service';
 
-type AppSection = 'overview' | 'pantry' | 'recipes' | 'planner' | 'shopping';
+type AppSection = 'overview' | 'pantry' | 'recipes' | 'planner' | 'shopping' | 'guide';
 type PantryLocationFilter = 'all' | StorageLocation;
 type ExpiryFilter = 'all' | 'expiring';
 
@@ -79,6 +79,7 @@ export class App {
   readonly recipeTagFilter = signal('all');
   readonly onlyReadyRecipes = signal(false);
   readonly showRecipeForm = signal(false);
+  readonly selectedRecipe = signal<Recipe | null>(null);
   readonly addingMealKey = signal<string | null>(null);
   readonly localToday = localDate(new Date());
   readonly planDateSelections = signal<PlanDateSelection[]>([]);
@@ -142,6 +143,7 @@ export class App {
     { id: 'recipes', label: 'Ricette', icon: '✳' },
     { id: 'planner', label: 'Piano pasti', icon: '▦' },
     { id: 'shopping', label: 'Spesa', icon: '⌑' },
+    { id: 'guide', label: 'Guida', icon: 'ⓘ' },
   ];
   readonly units: MeasurementUnit[] = ['g', 'kg', 'ml', 'l', 'pz'];
   readonly shoppingUnits: MeasurementUnit[] = ['g', 'kg', 'ml', 'l', 'pz'];
@@ -260,6 +262,14 @@ export class App {
     return (
       this.store.ingredients().find((ingredient) => ingredient.id === id)?.name ?? 'Ingrediente'
     );
+  }
+
+  openRecipeDetails(recipe: Recipe): void {
+    this.selectedRecipe.set(recipe);
+  }
+
+  closeRecipeDetails(): void {
+    this.selectedRecipe.set(null);
   }
 
   locationLabel(location: StorageLocation): string {

@@ -594,21 +594,26 @@
             <div class="recipe-grid">
               @for (recipe of visibleRecipes(); track recipe.id) {
                 <article class="recipe-card" [class.recipe-excluded]="recipe.excludedFromPlan">
-                  <div
-                    class="recipe-art"
-                    [class.art-pasta]="recipe.category === 'dinner'"
-                    [class.art-greens]="recipe.category === 'lunch'"
-                    [class.art-skillet]="
-                      recipe.category === 'other' || recipe.category === 'breakfast'
-                    "
-                  >
-                    <span>{{
-                      recipe.category === 'dinner'
-                        ? '🍝'
-                        : recipe.category === 'lunch'
-                          ? '🥗'
-                          : '🍳'
-                    }}</span>
+                  <div class="recipe-card-art">
+                    <button
+                      type="button"
+                      class="recipe-art recipe-card-art-button"
+                      [class.art-pasta]="recipe.category === 'dinner'"
+                      [class.art-greens]="recipe.category === 'lunch'"
+                      [class.art-skillet]="
+                        recipe.category === 'other' || recipe.category === 'breakfast'
+                      "
+                      [attr.aria-label]="'Apri la ricetta ' + recipe.title"
+                      (click)="openRecipeDetails(recipe)"
+                    >
+                      <span>{{
+                        recipe.category === 'dinner'
+                          ? '🍝'
+                          : recipe.category === 'lunch'
+                            ? '🥗'
+                            : '🍳'
+                      }}</span>
+                    </button>
                     <button
                       type="button"
                       class="favorite-toggle"
@@ -624,68 +629,75 @@
                       <span class="excluded-ribbon">Fuori dal piano</span>
                     }
                   </div>
-                  <div class="recipe-card-body">
-                    <div class="recipe-card-meta">
-                      <span>{{ recipeCategoryLabel(recipe.category) }}</span
-                      ><span>·</span
-                      ><span>{{
-                        recipe.prepMinutes > 0 ? recipe.prepMinutes + ' min' : 'Tempo n.d.'
-                      }}</span
-                      ><span>·</span><span>{{ recipe.servings }} porzioni</span>
-                    </div>
-                    <h3>{{ recipe.title }}</h3>
-                    <p>{{ recipe.description || 'Una ricetta di casa da provare.' }}</p>
-                    <p class="recipe-ingredient-summary">
-                      {{ recipeIngredientsLabel(recipe) || 'Ingredienti non indicati' }}
-                    </p>
-                    <div class="tag-row">
-                      @for (tag of recipe.tags; track tag) {
-                        <span class="tag">{{ tag }}</span>
-                      }
-                    </div>
-                    <div class="recipe-card-footer">
-                      <span
-                        class="ready-label"
-                        [class.ready-missing]="missingIngredients(recipe) > 0"
-                        >{{
-                          missingIngredients(recipe) === 0
-                            ? '✓ Tutto in dispensa'
-                            : missingIngredients(recipe) + ' da comprare'
+                  <button
+                    type="button"
+                    class="recipe-card-open"
+                    [attr.aria-label]="'Apri i dettagli di ' + recipe.title"
+                    (click)="openRecipeDetails(recipe)"
+                  >
+                    <div class="recipe-card-body">
+                      <div class="recipe-card-meta">
+                        <span>{{ recipeCategoryLabel(recipe.category) }}</span
+                        ><span>·</span
+                        ><span>{{
+                          recipe.prepMinutes > 0 ? recipe.prepMinutes + ' min' : 'Tempo n.d.'
                         }}</span
-                      >
+                        ><span>·</span><span>{{ recipe.servings }} porzioni</span>
+                      </div>
+                      <h3>{{ recipe.title }}</h3>
+                      <p>{{ recipe.description || 'Una ricetta di casa da provare.' }}</p>
+                      <p class="recipe-ingredient-summary">
+                        {{ recipeIngredientsLabel(recipe) || 'Ingredienti non indicati' }}
+                      </p>
+                      <div class="tag-row">
+                        @for (tag of recipe.tags; track tag) {
+                          <span class="tag">{{ tag }}</span>
+                        }
+                      </div>
+                    </div>
+                  </button>
+                  <div class="recipe-card-footer">
+                    <span
+                      class="ready-label"
+                      [class.ready-missing]="missingIngredients(recipe) > 0"
+                      >{{
+                        missingIngredients(recipe) === 0
+                          ? '✓ Tutto in dispensa'
+                          : missingIngredients(recipe) + ' da comprare'
+                      }}</span
+                    >
+                    <button
+                      type="button"
+                      class="cooked-button"
+                      (click)="store.recordCooked(recipe.id)"
+                    >
+                      L’ho cucinata
+                    </button>
+                    <div class="recipe-actions">
                       <button
                         type="button"
-                        class="cooked-button"
-                        (click)="store.recordCooked(recipe.id)"
+                        class="icon-button"
+                        [attr.aria-label]="'Modifica ' + recipe.title"
+                        (click)="editRecipe(recipe)"
                       >
-                        L’ho cucinata
+                        ✎</button
+                      ><button
+                        type="button"
+                        class="icon-button"
+                        [attr.aria-label]="
+                          recipe.excludedFromPlan ? 'Includi nel piano' : 'Escludi dal piano'
+                        "
+                        (click)="store.toggleRecipeExcluded(recipe.id)"
+                      >
+                        ⊘</button
+                      ><button
+                        type="button"
+                        class="icon-button danger-hover"
+                        [attr.aria-label]="'Elimina ' + recipe.title"
+                        (click)="deleteRecipe(recipe)"
+                      >
+                        ×
                       </button>
-                      <div class="recipe-actions">
-                        <button
-                          type="button"
-                          class="icon-button"
-                          [attr.aria-label]="'Modifica ' + recipe.title"
-                          (click)="editRecipe(recipe)"
-                        >
-                          ✎</button
-                        ><button
-                          type="button"
-                          class="icon-button"
-                          [attr.aria-label]="
-                            recipe.excludedFromPlan ? 'Includi nel piano' : 'Escludi dal piano'
-                          "
-                          (click)="store.toggleRecipeExcluded(recipe.id)"
-                        >
-                          ⊘</button
-                        ><button
-                          type="button"
-                          class="icon-button danger-hover"
-                          [attr.aria-label]="'Elimina ' + recipe.title"
-                          (click)="deleteRecipe(recipe)"
-                        >
-                          ×
-                        </button>
-                      </div>
                     </div>
                   </div>
                 </article>
@@ -1290,6 +1302,252 @@
             </div>
           }
         }
+
+        @if (activeSection() === 'guide') {
+          <section class="page-heading">
+            <div>
+              <span class="eyebrow">MAJA KITCHEN · GUIDA PRATICA</span>
+              <h1>Come funziona <em>la cucina</em></h1>
+              <p class="page-intro">
+                Una guida passo dopo passo per organizzare ingredienti, ricette, pasti e spesa.
+              </p>
+            </div>
+            <button type="button" class="button button-primary" (click)="selectSection('planner')">
+              Organizza i pasti <span>→</span>
+            </button>
+          </section>
+
+          <section class="guide-intro panel">
+            <div class="guide-intro-icon" aria-hidden="true">✦</div>
+            <div>
+              <span class="eyebrow">IL PERCORSO</span>
+              <h2>Dalla dispensa alla tavola, senza perdere il filo.</h2>
+              <p>
+                MaJa Kitchen collega ciò che avete in casa alle ricette, propone un piano che potete
+                rivedere e prepara la lista della spesa. Le modifiche vengono salvate nello spazio
+                condiviso della casa quando accedete con un account.
+              </p>
+            </div>
+          </section>
+
+          <nav class="guide-index panel" aria-label="Indice della guida">
+            <a href="#guida-casa"><span>01</span> Account e casa</a>
+            <a href="#guida-panoramica"><span>02</span> Panoramica</a>
+            <a href="#guida-dispensa"><span>03</span> Dispensa</a>
+            <a href="#guida-ricette"><span>04</span> Ricette</a>
+            <a href="#guida-piano"><span>05</span> Piano pasti</a>
+            <a href="#guida-spesa"><span>06</span> Lista della spesa</a>
+          </nav>
+
+          <div class="guide-steps">
+            <section class="guide-step panel" id="guida-casa">
+              <div class="guide-step-number">01</div>
+              <div class="guide-step-content">
+                <span class="eyebrow">PRIMA DI INIZIARE</span>
+                <h2>Accedi e scegli la vostra casa</h2>
+                <p>
+                  La casa è lo spazio in cui condividere dispensa, ricettario, piano pasti e lista
+                  della spesa.
+                </p>
+                <ol>
+                  <li>
+                    Accedi con email e password oppure crea un account. Se la registrazione richiede
+                    la conferma, controlla la posta prima di accedere.
+                  </li>
+                  <li>
+                    Al primo accesso scegli <strong>Unisciti a una casa</strong> e inserisci il
+                    codice ricevuto, oppure seleziona <strong>Crea una casa</strong> e assegnale un
+                    nome.
+                  </li>
+                  <li>
+                    Per invitare una persona, dalla Panoramica premi
+                    <strong>Invita in casa</strong>, genera il codice e condividilo: è monouso e
+                    valido 7 giorni.
+                  </li>
+                  <li>
+                    Il menu con le iniziali del tuo account, in alto a destra, permette di uscire.
+                  </li>
+                </ol>
+                <p class="guide-note">
+                  Se l’app è in modalità demo, i dati restano sul dispositivo e non vengono
+                  sincronizzati con una casa online.
+                </p>
+              </div>
+            </section>
+
+            <section class="guide-step panel" id="guida-panoramica">
+              <div class="guide-step-number">02</div>
+              <div class="guide-step-content">
+                <span class="eyebrow">IL PUNTO DI PARTENZA</span>
+                <h2>Usa la Panoramica per orientarti</h2>
+                <p>
+                  Qui trovi un riepilogo della cucina: ingredienti tracciati, prodotti da usare
+                  presto, ricette pronte e prossimi pasti.
+                </p>
+                <ul>
+                  <li>
+                    La sezione <strong>Da usare presto</strong> richiama gli ingredienti prossimi
+                    alla scadenza registrata.
+                  </li>
+                  <li>
+                    Dal riepilogo dei pasti puoi aprire il piano; dal riquadro delle ricette puoi
+                    raggiungere il ricettario.
+                  </li>
+                  <li>
+                    Il pulsante <strong>Organizza i pasti</strong> porta direttamente al calendario
+                    del piano.
+                  </li>
+                </ul>
+              </div>
+            </section>
+
+            <section class="guide-step panel" id="guida-dispensa">
+              <div class="guide-step-number">03</div>
+              <div class="guide-step-content">
+                <span class="eyebrow">QUELLO CHE AVETE IN CASA</span>
+                <h2>Aggiorna la dispensa</h2>
+                <p>
+                  Registra le quantità disponibili: il piano usa queste informazioni per dare
+                  priorità alle ricette che aiutano a utilizzare ciò che avete.
+                </p>
+                <ol>
+                  <li>
+                    Scrivi il nome dell’ingrediente e selezionalo dal catalogo, oppure inserisci un
+                    nuovo nome.
+                  </li>
+                  <li>
+                    Per un ingrediente nuovo scegli la categoria e i gruppi nutrizionali; poi indica
+                    quantità, unità e luogo (dispensa, frigo o freezer).
+                  </li>
+                  <li>
+                    La scadenza è facoltativa, ma inserirla aiuta a individuare gli ingredienti da
+                    usare presto.
+                  </li>
+                  <li>
+                    Nella tabella puoi aggiornare quantità, unità, posizione e scadenza oppure
+                    rimuovere un elemento. Usa ricerca e filtri per ritrovarlo più facilmente.
+                  </li>
+                </ol>
+                <p class="guide-note">
+                  I gruppi nutrizionali degli ingredienti sono usati anche per valutare la
+                  composizione di piatti principali e contorni.
+                </p>
+              </div>
+            </section>
+
+            <section class="guide-step panel" id="guida-ricette">
+              <div class="guide-step-number">04</div>
+              <div class="guide-step-content">
+                <span class="eyebrow">IL RICETTARIO DI CASA</span>
+                <h2>Crea ricette che il piano possa usare</h2>
+                <p>
+                  Ogni ricetta può contenere nome, descrizione, categoria, porzioni, tempo,
+                  ingredienti, tag e passaggi del procedimento.
+                </p>
+                <ol>
+                  <li>
+                    Premi <strong>Nuova ricetta</strong>. Inserisci ogni ingrediente e assegnagli
+                    uno o più gruppi nutrizionali, quindi aggiungi gli eventuali passaggi del
+                    procedimento, uno per riga.
+                  </li>
+                  <li>
+                    Inserisci i tag separati da virgola. Il tag
+                    <strong>contorno</strong> identifica una ricetta come contorno nelle proposte e
+                    nelle scelte del piano.
+                  </li>
+                  <li>
+                    Seleziona una ricetta per aprirne il dettaglio. Le azioni della scheda
+                    permettono di modificarla, contrassegnarla come preferita, registrare che è
+                    stata cucinata oppure escluderla dal piano.
+                  </li>
+                  <li>
+                    Usa ricerca, filtri per tag e filtro di disponibilità per restringere l’elenco.
+                  </li>
+                </ol>
+                <p class="guide-note">
+                  La classificazione degli ingredienti influenza i suggerimenti nutrizionali: se non
+                  è corretta, modifica i gruppi nell’ingrediente o nella ricetta.
+                </p>
+              </div>
+            </section>
+
+            <section class="guide-step panel" id="guida-piano">
+              <div class="guide-step-number">05</div>
+              <div class="guide-step-content">
+                <span class="eyebrow">PROPOSTA, REVISIONE, APPROVAZIONE</span>
+                <h2>Costruisci il piano dei pasti</h2>
+                <ol>
+                  <li>
+                    Nel calendario seleziona i giorni che ti interessano: possono essere futuri, non
+                    consecutivi e in numero libero. Ogni data parte con pranzo e cena; togli la
+                    spunta allo slot che non vuoi pianificare.
+                  </li>
+                  <li>
+                    Premi <strong>Genera proposta</strong>. La scelta tiene conto della dispensa,
+                    degli ingredienti in scadenza, dei preferiti e della cronologia delle ricette
+                    cucinate, cercando di distribuire i piatti.
+                  </li>
+                  <li>
+                    Rivedi ogni pasto: puoi cambiare il piatto principale, selezionare o rimuovere
+                    un contorno, aggiungere un altro piatto (principale o contorno) e rimuovere i
+                    piatti aggiunti. Puoi anche bloccare uno slot per conservarlo quando rigeneri la
+                    proposta.
+                  </li>
+                  <li>
+                    Quando la proposta ti soddisfa, premi <strong>Approva piano</strong>. Se il
+                    piano è già approvato, usa <strong>Modifica piano</strong> per riaprirlo come
+                    bozza.
+                  </li>
+                </ol>
+                <div class="guide-rule">
+                  <strong>Come funziona la regola del contorno</strong>
+                  <p>
+                    Un piatto principale che comprende carboidrati, proteine e verdure è considerato
+                    completo e non richiede un contorno. Se mancano gruppi nutrizionali, serve un
+                    contorno compatibile. Le combinazioni che duplicano i carboidrati, ad esempio
+                    pasta con patate, vengono evitate. I gruppi dipendono dalla classificazione
+                    degli ingredienti.
+                  </p>
+                </div>
+                <p class="guide-note">
+                  L’approvazione richiede almeno un pasto con un piatto principale e che ogni pasto
+                  inserito sia completo o abbia un contorno compatibile.
+                </p>
+              </div>
+            </section>
+
+            <section class="guide-step panel" id="guida-spesa">
+              <div class="guide-step-number">06</div>
+              <div class="guide-step-content">
+                <span class="eyebrow">DAL PIANO AL NEGOZIO</span>
+                <h2>Prepara e completa la spesa</h2>
+                <ol>
+                  <li>
+                    Dopo aver approvato il piano, apri <strong>Lista della spesa</strong>. Gli
+                    ingredienti delle ricette vengono raccolti in una lista condivisa; le quantità
+                    non sono preimpostate.
+                  </li>
+                  <li>
+                    In bozza puoi aggiungere un articolo manualmente o rimuovere quelli che non
+                    servono. Inserisci quantità e unità e approva la lista.
+                  </li>
+                  <li>
+                    Durante la spesa indica la quantità acquistata e spunta gli articoli; puoi
+                    selezionarli tutti dopo aver inserito le quantità.
+                  </li>
+                  <li>
+                    Premi <strong>Spesa completata</strong>: solo gli articoli spuntati vengono
+                    aggiunti alla dispensa, usando la quantità e l’unità indicate.
+                  </li>
+                </ol>
+                <p class="guide-note">
+                  Se modifichi un piano approvato, questo torna in bozza e la lista va generata e
+                  approvata di nuovo.
+                </p>
+              </div>
+            </section>
+          </div>
+        }
       </main>
     </div>
 
@@ -1306,6 +1564,79 @@
       }
     </nav>
   </div>
+
+  @if (selectedRecipe(); as recipe) {
+    <div class="modal-backdrop" (click)="closeRecipeDetails()">
+      <section
+        class="recipe-modal recipe-details-modal panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="recipe-detail-title"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="modal-heading">
+          <div>
+            <span class="eyebrow">RICETTA DI CASA</span>
+            <h2 id="recipe-detail-title">{{ recipe.title }}</h2>
+          </div>
+          <button
+            type="button"
+            class="icon-button"
+            aria-label="Chiudi dettagli ricetta"
+            (click)="closeRecipeDetails()"
+          >
+            ×
+          </button>
+        </div>
+        <div class="recipe-detail-meta">
+          <span>{{ recipeCategoryLabel(recipe.category) }}</span>
+          <span>{{ recipe.prepMinutes > 0 ? recipe.prepMinutes + ' min' : 'Tempo n.d.' }}</span>
+          <span>{{ recipe.servings }} porzioni</span>
+        </div>
+        <p class="recipe-detail-description">
+          {{ recipe.description || 'Una ricetta di casa da provare.' }}
+        </p>
+        @if (recipe.tags.length > 0) {
+          <div class="tag-row recipe-detail-tags">
+            @for (tag of recipe.tags; track tag) {
+              <span class="tag">{{ tag }}</span>
+            }
+          </div>
+        }
+        <div class="recipe-detail-columns">
+          <section class="recipe-detail-section">
+            <h3>Ingredienti</h3>
+            @if (recipe.ingredients.length > 0) {
+              <ul>
+                @for (ingredient of recipe.ingredients; track ingredient.ingredientId) {
+                  <li>{{ ingredientName(ingredient.ingredientId) }}</li>
+                }
+              </ul>
+            } @else {
+              <p>Ingredienti non indicati.</p>
+            }
+          </section>
+          <section class="recipe-detail-section">
+            <h3>Procedimento</h3>
+            @if (recipe.instructions.length > 0) {
+              <ol>
+                @for (step of recipe.instructions; track $index) {
+                  <li>{{ step }}</li>
+                }
+              </ol>
+            } @else {
+              <p>Procedimento non disponibile.</p>
+            }
+          </section>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="button button-primary" (click)="closeRecipeDetails()">
+            Chiudi
+          </button>
+        </div>
+      </section>
+    </div>
+  }
 
   @if (showRecipeForm()) {
     <div class="modal-backdrop" (click)="closeRecipeForm()">
