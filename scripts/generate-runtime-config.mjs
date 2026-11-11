@@ -29,8 +29,8 @@ function readValue(name) {
   return '';
 }
 
-const supabaseUrl = readValue('SUPABASE_URL');
-const supabaseAnonKey = readValue('SUPABASE_ANON_KEY');
+const supabaseUrl = process.env.SUPABASE_URL?.trim() || readValue('SUPABASE_URL');
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY?.trim() || readValue('SUPABASE_ANON_KEY');
 if (Boolean(supabaseUrl) !== Boolean(supabaseAnonKey)) {
   throw new Error('Configura sia SUPABASE_URL sia SUPABASE_ANON_KEY nel file .env.');
 }
