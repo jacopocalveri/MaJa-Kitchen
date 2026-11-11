@@ -852,26 +852,92 @@ h1 em {
   font-size: 11px;
 }
 
-.plan-date-add {
+.plan-calendar {
+  width: min(100%, 430px);
+  margin: 0 auto;
+}
+
+.plan-calendar-header {
   display: grid;
-  gap: 7px;
-  color: #6a796e;
-  font-size: 10px;
-  font-weight: 650;
+  grid-template-columns: 34px 1fr 34px;
+  align-items: center;
+  margin-bottom: 10px;
 }
 
-.plan-date-add > div {
-  display: flex;
-  gap: 8px;
-}
-
-.plan-date-add input {
-  min-height: 41px;
-  padding: 0 10px;
-  border: 1px solid var(--line);
-  border-radius: 9px;
+.plan-calendar-header h3 {
+  margin: 0;
   color: var(--ink);
-  font: inherit;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 17px;
+  font-weight: 500;
+  text-align: center;
+  text-transform: capitalize;
+}
+
+.plan-calendar-header .icon-button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  color: var(--green);
+  font-size: 21px;
+}
+
+.plan-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.plan-calendar-weekday {
+  padding: 5px 0;
+  color: #849087;
+  font-size: 9px;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.plan-calendar-day {
+  width: 100%;
+  aspect-ratio: 1;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 11px;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.plan-calendar-day:hover {
+  background: #edf4ed;
+}
+
+.plan-calendar-day.outside-month:not(.selected) {
+  color: #b7c0b8;
+}
+
+.plan-calendar-day.today:not(.selected) {
+  border-color: var(--green);
+  color: var(--green-dark);
+  font-weight: 700;
+}
+
+.plan-calendar-day.selected,
+.plan-calendar-day.selected:hover {
+  background: var(--green);
+  color: #fff;
+  font-weight: 700;
+}
+
+.plan-calendar-help {
+  margin: 10px 0 0;
+  color: #818d83;
+  font-size: 10px;
+  line-height: 1.5;
+  text-align: center;
 }
 
 .plan-date-list {
@@ -2255,14 +2321,12 @@ h1 em {
     flex-direction: column;
   }
 
-  .plan-date-add > div {
-    align-items: stretch;
-    flex-direction: column;
+  .plan-calendar-grid {
+    gap: 3px;
   }
 
-  .plan-date-add input,
-  .plan-date-add .button {
-    width: 100%;
+  .plan-calendar-day {
+    font-size: 10px;
   }
 
   .plan-date-row {

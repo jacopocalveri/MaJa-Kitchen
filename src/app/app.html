@@ -658,23 +658,53 @@
               <div class="plan-date-selector-heading">
                 <div>
                   <span class="eyebrow">CONFIGURA IL PIANO</span>
-                  <h2>Scegli le date</h2>
-                  <p>Aggiungi una o più date e seleziona pranzo, cena o entrambi.</p>
+                  <h2>Seleziona i giorni</h2>
+                  <p>Clicca sul calendario i giorni da includere nel piano.</p>
                 </div>
-                <div class="plan-date-add">
-                  <label for="plan-date-input">Data</label>
-                  <div>
-                    <input
-                      id="plan-date-input"
-                      type="date"
-                      name="plan-date-input"
-                      [(ngModel)]="planDateInput"
-                    />
-                    <button type="button" class="button button-soft" (click)="addPlanDate()">
-                      Aggiungi data
+              </div>
+              <div class="plan-calendar">
+                <div class="plan-calendar-header">
+                  <button
+                    type="button"
+                    class="icon-button"
+                    aria-label="Mese precedente"
+                    (click)="changeCalendarMonth(-1)"
+                  >
+                    ‹
+                  </button>
+                  <h3>{{ planCalendarMonthLabel() }}</h3>
+                  <button
+                    type="button"
+                    class="icon-button"
+                    aria-label="Mese successivo"
+                    (click)="changeCalendarMonth(1)"
+                  >
+                    ›
+                  </button>
+                </div>
+                <div class="plan-calendar-grid">
+                  @for (weekday of planCalendarWeekdays; track weekday) {
+                    <span class="plan-calendar-weekday">{{ weekday }}</span>
+                  }
+                  @for (day of planCalendarDays(); track day.date) {
+                    <button
+                      type="button"
+                      class="plan-calendar-day"
+                      [class.selected]="day.selected"
+                      [class.today]="day.today"
+                      [class.outside-month]="!day.inCurrentMonth"
+                      [attr.aria-label]="dayLabel(day.date)"
+                      [attr.aria-pressed]="day.selected"
+                      (click)="togglePlanDate(day.date)"
+                    >
+                      {{ day.day }}
                     </button>
-                  </div>
+                  }
                 </div>
+                <p class="plan-calendar-help">
+                  {{ planDateSelections().length }} date selezionate · ogni nuova data include
+                  pranzo e cena, modificabili qui sotto.
+                </p>
               </div>
               <div class="plan-date-list">
                 @for (selection of planDateSelections(); track selection.date) {
@@ -711,7 +741,7 @@
                   </div>
                 } @empty {
                   <p class="plan-date-empty">
-                    Non hai ancora aggiunto date. Puoi scegliere anche giorni futuri.
+                    Nessun giorno selezionato. Scegli le date direttamente dal calendario.
                   </p>
                 }
               </div>

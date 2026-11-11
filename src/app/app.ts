@@ -43,6 +43,14 @@ interface PlanDateSelection {
   dinner: boolean;
 }
 
+interface PlanCalendarDay {
+  date: string;
+  day: number;
+  selected: boolean;
+  today: boolean;
+  inCurrentMonth: boolean;
+}
+
 interface RecipeIngredientDraft {
   ingredientName: string;
   category: IngredientCategory;
@@ -71,6 +79,16 @@ export class App {
   readonly addingMealKey = signal<string | null>(null);
   readonly localToday = localDate(new Date());
   readonly planDateSelections = signal<PlanDateSelection[]>([]);
+  readonly calendarMonth = signal(this.localToday.slice(0, 7));
+  readonly planCalendarWeekdays = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'];
+  readonly planCalendarDays = computed(() =>
+    this.buildPlanCalendarDays(this.calendarMonth(), this.planDateSelections()),
+  );
+  readonly planCalendarMonthLabel = computed(() =>
+    new Intl.DateTimeFormat('it-IT', { month: 'long', year: 'numeric' }).format(
+      new Date(`${this.calendarMonth()}-01T12:00:00`),
+    ),
+  );
   readonly todayHeading = new Intl.DateTimeFormat('it-IT', {
     weekday: 'long',
     day: 'numeric',
@@ -168,7 +186,6 @@ export class App {
 
   shoppingIngredientId = this.store.ingredients()[0]?.id ?? '';
   additionalRecipeId = '';
-  planDateInput = this.localToday;
   private planDateSelectionTouched = false;
 
   constructor() {
@@ -185,7 +202,11 @@ export class App {
         }
       }
       if (meals.length > 0 && !this.planDateSelectionTouched) {
-        this.planDateSelections.set(this.selectionsFromMeals(meals));
+        const selections = this.selectionsFromMeals(meals);
+        this.planDateSelections.set(selections);
+        if (selections[0]) {
+          this.calendarMonth.set(selections[0].date.slice(0, 7));
+        }
       }
     });
     effect(() => {
@@ -428,24 +449,24 @@ export class App {
     return formatDate(date);
   }
 
-  addPlanDate(): void {
-    const date = this.planDateInput;
-    const parsedDate = new Date(`${date}T12:00:00`);
-    if (!date || Number.isNaN(parsedDate.getTime()) || localDate(parsedDate) !== date) {
-      this.store.error.set('Inserisci una data valida.');
-      return;
-    }
-    if (this.planDateSelections().some((selection) => selection.date === date)) {
-      this.store.error.set('Questa data è già stata aggiunta al piano.');
-      return;
-    }
+  togglePlanDate(date: string): void {
     this.store.clearError();
     this.planDateSelectionTouched = true;
-    this.planDateSelections.update((selections) =>
-      [...selections, { date, lunch: true, dinner: true }].sort((left, right) =>
+    this.planDateSelections.update((selections) => {
+      if (selections.some((selection) => selection.date === date)) {
+        return selections.filter((selection) => selection.date !== date);
+      }
+      return [...selections, { date, lunch: true, dinner: true }].sort((left, right) =>
         left.date.localeCompare(right.date),
-      ),
-    );
+      );
+    });
+    this.calendarMonth.set(date.slice(0, 7));
+  }
+
+  changeCalendarMonth(offset: number): void {
+    const month = new Date(`${this.calendarMonth()}-01T12:00:00`);
+    month.setMonth(month.getMonth() + offset);
+    this.calendarMonth.set(localDate(month).slice(0, 7));
   }
 
   removePlanDate(date: string): void {
@@ -857,6 +878,29 @@ export class App {
       byDate.set(meal.date, selection);
     }
     return [...byDate.values()].sort((left, right) => left.date.localeCompare(right.date));
+  }
+
+  private buildPlanCalendarDays(
+    monthValue: string,
+    selections: readonly PlanDateSelection[],
+  ): PlanCalendarDay[] {
+    const monthStart = new Date(`${monthValue}-01T12:00:00`);
+    const firstVisibleDate = new Date(monthStart);
+    firstVisibleDate.setDate(firstVisibleDate.getDate() - ((firstVisibleDate.getDay() + 6) % 7));
+    const selectedDates = new Set(selections.map((selection) => selection.date));
+
+    return Array.from({ length: 42 }, (_, index) => {
+      const date = new Date(firstVisibleDate);
+      date.setDate(firstVisibleDate.getDate() + index);
+      const dateValue = localDate(date);
+      return {
+        date: dateValue,
+        day: date.getDate(),
+        selected: selectedDates.has(dateValue),
+        today: dateValue === this.localToday,
+        inCurrentMonth: date.getMonth() === monthStart.getMonth(),
+      };
+    });
   }
 }
 
